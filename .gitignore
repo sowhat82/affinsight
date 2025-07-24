@@ -1,0 +1,17 @@
+# Ignore secrets
+.secrets.toml
+.env
+*.env
+
+# Ignore environment files
+__pycache__/
+*.pyc
+
+# Ignore Jupyter and notebook checkpoints (if any)
+.ipynb_checkpoints/
+
+# Ignore system and IDE files
+.DS_Store
+*.log
+.vscode/
+*.sqlite3
