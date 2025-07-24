@@ -102,10 +102,16 @@ def upload_and_preview():
     st.subheader("Upload your financial data")
     uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
     if uploaded_file:
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
+        try:
+            if uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+            else:
+                import openpyxl  # Required for .xlsx reading
+                df = pd.read_excel(uploaded_file, engine="openpyxl")
+        except ImportError:
+            st.error("The 'openpyxl' package is required to read Excel files. Please install it by adding 'openpyxl' to your requirements.txt.")
+            return
+
         st.write("Preview of uploaded data:")
         st.dataframe(df.head())
 
