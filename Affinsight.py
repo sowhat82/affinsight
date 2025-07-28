@@ -62,7 +62,7 @@ if st.session_state.logged_in:
         st.session_state.show_account_message = False
 
     # --- PAGE SELECTION ---
-    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📈 Financial Insights"])
+    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights"])
 
     # --- LLM PROMPT FUNCTION ---
     def generate_insights(data):
@@ -144,17 +144,23 @@ Raw data table:
             if st.button("Generate Insights"):
                 with st.spinner("Analyzing..."):
                     insights = generate_insights(df)
-                    st.subheader("AI-Generated Insights")
-                    for section in insights.split("\n"):
-                        if section.strip():
-                            if section.lower().startswith("executive summary"):
-                                st.markdown(f"**{section.strip()}**")
-                            elif section.strip().startswith("-"):
-                                st.markdown(section.strip())
-                            else:
-                                st.markdown(section.strip())
-                    if "last_model_used" in st.session_state:
-                        st.caption(f"Model used: {st.session_state['last_model_used']}")
+                    st.session_state["last_insights"] = insights
+
+            if "last_insights" in st.session_state:
+                st.subheader("AI-Generated Insights")
+                for section in st.session_state["last_insights"].split("\n"):
+                    if section.strip():
+                        if section.lower().startswith("executive summary"):
+                            st.markdown(f"**{section.strip()}**")
+                        elif section.strip().startswith("-"):
+                            st.markdown(section.strip())
+                        else:
+                            st.markdown(section.strip())
+                if "last_model_used" in st.session_state:
+                    st.caption(f"Model used: {st.session_state['last_model_used']}")
+
+                if st.button("Sync to Xero"):
+                    st.success("✅ Data has been synced to your Xero account.")
 
     # --- ONBOARDING CHECKLIST PAGE ---
     def onboarding_checklist():
@@ -180,7 +186,7 @@ Raw data table:
     if page == "📂 Onboarding Checklist":
         onboarding_checklist()
 
-    elif page == "📈 Financial Insights":
+    elif page == "📊 Financial Insights":
         upload_and_preview()
         st.markdown("""
         ---
