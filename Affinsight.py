@@ -58,7 +58,7 @@ if st.session_state.logged_in:
         st.session_state.show_success = False
 
     if 'show_account_message' in st.session_state and st.session_state.show_account_message:
-        st.success(f"✅ Account created and logged in!\n\n📂 Cloud folder initialized for user: '{st.session_state.username}'.\nAffintive staff will retrieve uploaded files from this folder.")
+        st.success(f"✅ Account created and logged in!\n\n📂 Simulated cloud folder initialized for user: '{st.session_state.username}'.\nAffintive staff will retrieve uploaded files from this folder.")
         st.session_state.show_account_message = False
 
     # --- PAGE SELECTION ---
@@ -80,12 +80,16 @@ if st.session_state.logged_in:
             prompt_stats += f"Net Profit by month: {values}\n"
 
         prompt = f"""
-You are a financial analyst. Review the client's financial data and write 3 useful bullet-point insights about their performance.
-Focus on revenue, expenses, and profit.
-Use only the facts from the data below. Avoid assumptions.
+You are a financial analyst preparing a report for SME management. From the financial data provided, do the following:
 
+1. Write a **concise executive summary** (1-2 sentences) that highlights the most impactful findings or recommendations. This summary should help busy executives quickly focus their attention on the most critical financial issue or opportunity.
+
+2. Then, follow with **3 factual and helpful bullet-point insights** based strictly on the uploaded data. Focus on trends in revenue, expenses, and profit. Do not hallucinate. Avoid generic or vague statements.
+
+Data (CSV preview and summary stats below):
 {prompt_stats}
-Data:
+
+Raw data table:
 {data.to_csv(index=False)}
 """
 
@@ -141,7 +145,14 @@ Data:
                 with st.spinner("Analyzing..."):
                     insights = generate_insights(df)
                     st.subheader("AI-Generated Insights")
-                    st.text(insights)
+                    for section in insights.split("\n"):
+                        if section.strip():
+                            if section.lower().startswith("executive summary"):
+                                st.markdown(f"**{section.strip()}**")
+                            elif section.strip().startswith("-"):
+                                st.markdown(section.strip())
+                            else:
+                                st.markdown(section.strip())
                     if "last_model_used" in st.session_state:
                         st.caption(f"Model used: {st.session_state['last_model_used']}")
 
