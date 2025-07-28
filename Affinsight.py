@@ -124,10 +124,6 @@ Raw data table:
                     if result.get('choices'):
                         st.session_state["last_model_used"] = model
 
-                        # Debug: Display raw response from OpenRouter
-                        st.subheader("Raw Response from OpenRouter")
-                        st.json(result)
-
                         return result['choices'][0]['message']['content'].strip()
                     else:
                         continue
@@ -229,14 +225,9 @@ Raw data table:
             st.subheader("AI-Generated Insights")
             for section in st.session_state["last_insights"].split("\n"):
                 if section.strip():
-                    if section.strip().lower().startswith("executive summary"):
-                        st.markdown(f"\n**{section.strip()}**\n")
-                    elif section.strip().lower().startswith("key insights"):
-                        st.markdown(f"\n**{section.strip()}**\n")
-                    elif section.strip().startswith("-"):
-                        st.markdown(section.strip())
-                    else:
-                        st.markdown(section.strip())
+                    # Display raw section using st.text to avoid Markdown processing
+                    st.text(section.strip())
+
             if "last_model_used" in st.session_state:
                 st.caption(f"Model used: {st.session_state['last_model_used']}")
 
