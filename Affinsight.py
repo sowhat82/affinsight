@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 import os
 import json
+import re
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -65,26 +66,37 @@ if st.session_state.logged_in:
     page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights"])
 
     # --- LLM PROMPT FUNCTION ---
-    def generate_insights(data):
+    def generate_insights(data, option):
+        # Remove column filtering and send the entire parsed data to the model
+        if option == "Payroll only":
+            prompt_context = "Analyze payroll data, focusing on salary distribution, bonuses, and any notable patterns or trends."
+        elif option == "Claims & expenses":
+            prompt_context = "Analyze claims and expenses, identifying categories with the highest costs, trends over time, and potential areas for cost optimization."
+        elif option == "Revenue":
+            prompt_context = "Analyze revenue data, focusing on monthly growth, seasonal patterns, and overall performance trends."
+        else:
+            prompt_context = ""  # Default to empty if option is None or unrecognized
+
+        # Handle None for option in generate_insights
+        if option is None:
+            option_description = "uploaded financial"
+        else:
+            option_description = option.lower()
+
+        # Use the entire data without filtering
         column_summary = ", ".join(data.columns)
         prompt_stats = ""
 
-        if 'Revenue' in data.columns:
-            values = ", ".join(str(x) for x in data['Revenue'].tolist())
-            prompt_stats += f"Revenue by month: {values}\n"
-        if 'Operating Expenses' in data.columns:
-            values = ", ".join(str(x) for x in data['Operating Expenses'].tolist())
-            prompt_stats += f"Operating Expenses by month: {values}\n"
-        if 'Net Profit' in data.columns:
-            values = ", ".join(str(x) for x in data['Net Profit'].tolist())
-            prompt_stats += f"Net Profit by month: {values}\n"
+        for column in data.columns:
+            values = ", ".join(str(x) for x in data[column].tolist())
+            prompt_stats += f"{column}: {values}\n"
 
         prompt = f"""
-You are a financial analyst preparing a report for SME management. From the financial data provided, do the following:
+You are a data analyst tasked with generating insights for SME management. Based on the provided {option_description} data, do the following:
 
-1. Write a **concise executive summary** (1-2 sentences) that highlights the most impactful findings or recommendations. This summary should help busy executives quickly focus their attention on the most critical financial issue or opportunity.
+1. Write an **Executive Summary:** (1-2 sentences) that highlights the most impactful findings or recommendations. This summary should help busy executives quickly focus their attention on the most critical issues or opportunities.
 
-2. Then, follow with **3 factual and helpful bullet-point insights** based strictly on the uploaded data. Focus on trends in revenue, expenses, and profit. Do not hallucinate. Avoid generic or vague statements.
+2. Then, follow with **Key Insights:** – 3 factual and helpful bullet-point insights based strictly on the uploaded data. {prompt_context}
 
 Data (CSV preview and summary stats below):
 {prompt_stats}
@@ -111,6 +123,11 @@ Raw data table:
                     result = response.json()
                     if result.get('choices'):
                         st.session_state["last_model_used"] = model
+
+                        # Debug: Display raw response from OpenRouter
+                        st.subheader("Raw Response from OpenRouter")
+                        st.json(result)
+
                         return result['choices'][0]['message']['content'].strip()
                     else:
                         continue
@@ -125,7 +142,46 @@ Raw data table:
 
     # --- FILE UPLOAD & DATA PREVIEW ---
     def upload_and_preview():
-        st.subheader("Upload your financial data")
+        st.subheader("Upload your financial data or fetch from Xero")
+
+        # Add options for filtering insights
+        insight_option = st.radio(
+            "Select the type of insights to generate:",
+            ["Payroll only", "Claims & expenses", "Revenue"],
+            index=0
+        )
+
+        # Simulate fetching current year data from Xero
+        if st.button("Fetch Current Year Data from Xero"):
+            st.success("✅ Current year data fetched from Xero. Insights will be generated based on this data.")
+
+            # Mock data for preview
+            st.session_state["mock_data"] = {
+                "Payroll only": pd.DataFrame({
+                    "Employee": ["Alice", "Bob", "Charlie"],
+                    "Salary": [5000, 4500, 4800],
+                    "Bonuses": [500, 400, 450]
+                }),
+                "Claims & expenses": pd.DataFrame({
+                    "Category": ["Travel", "Office Supplies", "Utilities"],
+                    "Amount": [1200, 800, 600]
+                }),
+                "Revenue": pd.DataFrame({
+                    "Month": ["January", "February", "March"],
+                    "Revenue": [10000, 12000, 15000]
+                })
+            }
+
+        # Display relevant mock data if available
+        if "mock_data" in st.session_state:
+            st.write("Preview of fetched data:")
+            st.dataframe(st.session_state["mock_data"][insight_option])
+
+            if st.button("Generate Insights for Xero Data"):
+                with st.spinner("Analyzing..."):
+                    insights = generate_insights(st.session_state["mock_data"][insight_option], insight_option)
+                    st.session_state["last_insights"] = insights
+
         uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
         if uploaded_file:
             try:
@@ -136,31 +192,56 @@ Raw data table:
                     df = pd.read_excel(uploaded_file, engine="openpyxl")
             except ImportError:
                 st.error("The 'openpyxl' package is required to read Excel files. Please install it by adding 'openpyxl' to your requirements.txt.")
-                return
+                return None
 
             st.write("Preview of uploaded data:")
             st.dataframe(df.head())
 
-            if st.button("Generate Insights"):
-                with st.spinner("Analyzing..."):
-                    insights = generate_insights(df)
-                    st.session_state["last_insights"] = insights
+            # Exclude insight_option from the prompt for Excel uploads
+            if uploaded_file:
+                column_summary = ", ".join(df.columns)
+                prompt_stats = ""
 
-            if "last_insights" in st.session_state:
-                st.subheader("AI-Generated Insights")
-                for section in st.session_state["last_insights"].split("\n"):
-                    if section.strip():
-                        if section.lower().startswith("executive summary"):
-                            st.markdown(f"**{section.strip()}**")
-                        elif section.strip().startswith("-"):
-                            st.markdown(section.strip())
-                        else:
-                            st.markdown(section.strip())
-                if "last_model_used" in st.session_state:
-                    st.caption(f"Model used: {st.session_state['last_model_used']}")
+                for column in df.columns:
+                    values = ", ".join(str(x) for x in df[column].tolist())
+                    prompt_stats += f"{column}: {values}\n"
 
-                if st.button("Sync to Xero"):
-                    st.success("✅ Data has been synced to your Xero account.")
+                prompt = f"""
+You are a data analyst tasked with generating insights for SME management. Based on the provided financial data, do the following:
+
+1. Write an **Executive Summary:** (1-2 sentences) that highlights the most impactful findings or recommendations. This summary should help busy executives quickly focus their attention on the most critical issues or opportunities.
+
+2. Then, follow with **Key Insights:** – 3 factual and helpful bullet-point insights based strictly on the uploaded data.
+
+Data (CSV preview and summary stats below):
+{prompt_stats}
+
+Raw data table:
+{df.to_csv(index=False)}
+"""
+
+                if st.button("Generate Insights"):
+                    with st.spinner("Analyzing..."):
+                        insights = generate_insights(df, None)  # Pass None instead of insight_option
+                        st.session_state["last_insights"] = insights
+
+        if "last_insights" in st.session_state:
+            st.subheader("AI-Generated Insights")
+            for section in st.session_state["last_insights"].split("\n"):
+                if section.strip():
+                    if section.strip().lower().startswith("executive summary"):
+                        st.markdown(f"\n**{section.strip()}**\n")
+                    elif section.strip().lower().startswith("key insights"):
+                        st.markdown(f"\n**{section.strip()}**\n")
+                    elif section.strip().startswith("-"):
+                        st.markdown(section.strip())
+                    else:
+                        st.markdown(section.strip())
+            if "last_model_used" in st.session_state:
+                st.caption(f"Model used: {st.session_state['last_model_used']}")
+
+            if st.button("Sync to Xero"):
+                st.success("✅ Data has been (simulated) synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
 
     # --- ONBOARDING CHECKLIST PAGE ---
     def onboarding_checklist():
