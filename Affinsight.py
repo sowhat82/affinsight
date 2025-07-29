@@ -26,7 +26,7 @@ if 'logged_in' not in st.session_state:
 if not st.session_state.logged_in:
     st.image("affintive_logo.png", width=200)
     st.title("📊 Affinsight – AI-Powered Reporting Assistant")
-    st.subheader("🔐 Login Simulation")
+    st.subheader("🔐 Login")
 
     st.markdown("If you're a new user, create an account below:")
     with st.expander("Create a New Account"):
@@ -59,7 +59,7 @@ if st.session_state.logged_in:
         st.session_state.show_success = False
 
     if 'show_account_message' in st.session_state and st.session_state.show_account_message:
-        st.success(f"✅ Account created and logged in!\n\n📂 Simulated cloud folder initialized for user: '{st.session_state.username}'.\nAffintive staff will retrieve uploaded files from this folder.")
+        st.success(f"✅ Account created and logged in!\n\n📂 Cloud folder initialized for user: '{st.session_state.username}'.\nAffintive staff will retrieve uploaded files from this folder.")
         st.session_state.show_account_message = False
 
     # --- PAGE SELECTION ---
@@ -97,6 +97,8 @@ You are a data analyst tasked with generating insights for SME management. Based
 1. Write an **Executive Summary:** (1-2 sentences) that highlights the most impactful findings or recommendations. This summary should help busy executives quickly focus their attention on the most critical issues or opportunities.
 
 2. Then, follow with **Key Insights:** – 3 factual and helpful bullet-point insights based strictly on the uploaded data. {prompt_context}
+
+3. Finally, provide **Suggested Actions:** – 2-3 actionable suggestions for further analysis or follow-up based on the generated insights.
 
 Data (CSV preview and summary stats below):
 {prompt_stats}
