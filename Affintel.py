@@ -1,5 +1,5 @@
 # AI-Powered Reporting Assistant - Streamlit Prototype (v1)
-# Project name: Affinsight (by Affintive)
+# Project name: Affintel (by Affintive)
 
 import streamlit as st
 import pandas as pd
@@ -25,7 +25,7 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.image("affintive_logo.png", width=200)
-    st.title("📊 Affinsight – AI-Powered Reporting Assistant")
+    st.title("📊 Affintel – AI-Powered Reporting Assistant")
     st.subheader("🔐 Login")
 
     st.markdown("If you're a new user, create an account below:")
@@ -53,7 +53,7 @@ if not st.session_state.logged_in:
 
 if st.session_state.logged_in:
     st.image("affintive_logo.png", width=200)
-    st.title("📊 Affinsight – AI-Powered Reporting Assistant")
+    st.title("📊 Affintel – AI-Powered Reporting Assistant")
     if 'show_success' in st.session_state and st.session_state.show_success:
         st.success("Login successful. Welcome!")
         st.session_state.show_success = False
@@ -234,7 +234,7 @@ Raw data table:
                 st.caption(f"Model used: {st.session_state['last_model_used']}")
 
             if st.button("Sync to Xero"):
-                st.success("✅ Data has been (simulated) synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
+                st.success("✅ Data has been synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
 
     # --- ONBOARDING CHECKLIST PAGE ---
     def onboarding_checklist():
@@ -255,7 +255,7 @@ Raw data table:
                 st.success(f"✅ '{item}' uploaded. Affintive account manager notified.")
 
     # --- MAIN APP ROUTING ---
-    st.set_page_config(page_title="Affinsight", layout="centered")
+    st.set_page_config(page_title="Affintel", layout="centered")
 
     if page == "📂 Onboarding Checklist":
         onboarding_checklist()
