@@ -66,6 +66,27 @@ if st.session_state.logged_in:
 
     # --- PAGE SELECTION ---
     page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights", "🔔 Alerts Workflow", "📋 Client Summary"])
+    
+    # SharePoint connection status in sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**📁 Data Sources:**")
+    
+    # Xero status (always available in demo)
+    st.sidebar.markdown("✅ Xero: Connected")
+    
+    # SharePoint status
+    if st.session_state.get("sharepoint_connected", False):
+        st.sidebar.markdown("✅ SharePoint: Connected")
+        if st.session_state.get("sharepoint_last_sync"):
+            st.sidebar.caption(f"Last sync: {st.session_state['sharepoint_last_sync']}")
+        
+        # Show sync reminder in sidebar if needed
+        st.sidebar.caption("⚠️ 4 days since last update")
+    else:
+        st.sidebar.markdown("🔌 SharePoint: Not connected")
+        st.sidebar.caption("Connect in Financial Insights")
+    
+    st.sidebar.markdown("📤 Manual Upload: Available")
 
     # --- LLM PROMPT FUNCTION ---
     def generate_insights(data, option):
@@ -287,12 +308,13 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
     # --- FILE UPLOAD & DATA PREVIEW ---
     def upload_and_preview():
-        st.subheader("Upload your financial data or fetch from Xero")
+        st.subheader("Upload your financial data or fetch from multiple sources")
 
         st.markdown("""
         **Choose your data source:**
         - Fetch current year data from Xero.
-        - Upload your own Excel or CSV file.
+        - Synchronize with your SharePoint folder.
+        - Upload your own Excel or CSV file manually.
         """)
 
         # Add options for filtering insights
@@ -323,6 +345,151 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
                 })
             }
 
+        # SharePoint synchronization section
+        st.markdown("---")
+        st.markdown("**📁 SharePoint Integration:**")
+        
+        # SharePoint connection status
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.markdown("**SharePoint Folder Status:**")
+            if "sharepoint_connected" not in st.session_state:
+                st.session_state["sharepoint_connected"] = False
+            
+            if st.session_state["sharepoint_connected"]:
+                st.success("🔗 Connected to SharePoint folder: `/Financial Data/Monthly Reports`")
+                st.caption("Last sync: 2025-07-28 14:30 (4 days ago)")
+                
+                # Show sync reminder if data is old
+                if True:  # Mock condition for old data
+                    st.warning("⚠️ **Sync Reminder:** No new files detected in 4 days. Please ensure your latest financial data is uploaded to SharePoint.")
+                
+            else:
+                st.info("🔌 SharePoint folder not connected. Click 'Connect SharePoint' to set up automatic synchronization.")
+        
+        with col2:
+            if st.session_state.get("sharepoint_connected", False):
+                if st.button("🔄 Sync Now", help="Manually trigger SharePoint synchronization"):
+                    with st.spinner("Synchronizing with SharePoint..."):
+                        # Simulate sync process
+                        import time
+                        time.sleep(2)
+                        
+                        # Mock new files found
+                        st.session_state["sharepoint_files"] = [
+                            {"name": "July_2025_Payroll.xlsx", "modified": "2025-07-31", "size": "45 KB", "type": "Payroll"},
+                            {"name": "Q3_2025_Expenses.csv", "modified": "2025-07-30", "size": "23 KB", "type": "Expenses"},
+                            {"name": "Revenue_Report_July.xlsx", "modified": "2025-07-29", "size": "67 KB", "type": "Revenue"}
+                        ]
+                        
+                        st.success("✅ SharePoint sync completed! Found 3 new files.")
+                        st.session_state["sharepoint_last_sync"] = "2025-08-01 " + "12:00"
+                        st.rerun()
+                
+                if st.button("⚙️ Settings", help="Configure SharePoint sync settings"):
+                    st.info("SharePoint sync settings would open in a modal")
+                    
+            else:
+                if st.button("🔗 Connect SharePoint", type="primary", help="Set up SharePoint folder synchronization"):
+                    with st.spinner("Connecting to SharePoint..."):
+                        # Simulate connection process
+                        import time
+                        time.sleep(2)
+                        st.session_state["sharepoint_connected"] = True
+                        st.session_state["sharepoint_folder"] = "/Financial Data/Monthly Reports"
+                        st.success("✅ SharePoint connected successfully!")
+                        st.rerun()
+
+        # Display SharePoint files if available
+        if st.session_state.get("sharepoint_files"):
+            st.markdown("**📋 Files from SharePoint:**")
+            
+            # Create expandable file list
+            with st.expander(f"📁 SharePoint Files ({len(st.session_state['sharepoint_files'])} files found)", expanded=True):
+                for i, file in enumerate(st.session_state["sharepoint_files"]):
+                    with st.container():
+                        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+                        
+                        with col1:
+                            st.write(f"📄 **{file['name']}**")
+                        with col2:
+                            st.caption(f"Modified: {file['modified']}")
+                        with col3:
+                            st.caption(f"Size: {file['size']}")
+                        with col4:
+                            if st.button("📊 Analyze", key=f"analyze_sp_{i}", help=f"Analyze {file['name']}"):
+                                # Mock data based on file type
+                                if file['type'] == 'Payroll':
+                                    mock_data = pd.DataFrame({
+                                        "Employee": ["John Doe", "Jane Smith", "Mike Johnson", "Sarah Wilson"],
+                                        "Salary": [5200, 4800, 5500, 4600],
+                                        "Bonuses": [520, 480, 550, 460]
+                                    })
+                                elif file['type'] == 'Expenses':
+                                    mock_data = pd.DataFrame({
+                                        "Category": ["Travel", "Office Supplies", "Utilities", "Software"],
+                                        "Amount": [1500, 850, 650, 1200]
+                                    })
+                                else:  # Revenue
+                                    mock_data = pd.DataFrame({
+                                        "Month": ["May", "June", "July"],
+                                        "Revenue": [15000, 18000, 16500]
+                                    })
+                                
+                                st.session_state["current_data"] = mock_data
+                                st.session_state["current_file"] = file['name']
+                                
+                                with st.spinner(f"Analyzing {file['name']}..."):
+                                    insights = generate_insights(mock_data, file['type'])
+                                    st.session_state["last_insights"] = insights
+                                    st.session_state["last_file_source"] = f"SharePoint: {file['name']}"
+                                
+                                st.success(f"✅ Analysis completed for {file['name']}")
+                                st.rerun()
+                        
+                        st.divider()
+
+        # SharePoint sync configuration
+        if st.session_state.get("sharepoint_connected", False):
+            st.markdown("---")
+            with st.expander("🔧 SharePoint Sync Configuration"):
+                st.markdown("**Automatic Sync Settings:**")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    sync_frequency = st.selectbox(
+                        "Sync Frequency:",
+                        ["Hourly", "Daily", "Weekly", "Manual only"],
+                        index=1
+                    )
+                    
+                    reminder_threshold = st.number_input(
+                        "Send reminder after (days without new data):",
+                        min_value=1,
+                        max_value=30,
+                        value=3
+                    )
+                
+                with col2:
+                    file_types = st.multiselect(
+                        "File types to sync:",
+                        ["Excel (.xlsx)", "CSV (.csv)", "PDF (.pdf)"],
+                        default=["Excel (.xlsx)", "CSV (.csv)"]
+                    )
+                    
+                    notification_email = st.text_input(
+                        "Notification email:",
+                        value=st.session_state.get("username", "") + "@example.com"
+                    )
+                
+                if st.button("💾 Save Sync Settings"):
+                    st.success("✅ SharePoint sync settings saved successfully!")
+                    st.info(f"📧 You'll receive reminders at {notification_email} if no new data is detected for {reminder_threshold} days.")
+
+        st.markdown("---")
+
+        # Manual file upload section
+        st.markdown("**📤 Manual File Upload:**")
         uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
         if uploaded_file:
             try:
@@ -337,11 +504,14 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
             st.write("Preview of uploaded data:")
             st.dataframe(df.head())
+            st.session_state["current_data"] = df
+            st.session_state["current_file"] = uploaded_file.name
 
-            if st.button("Generate Insights"):
-                with st.spinner("Analyzing..."):
+            if st.button("Generate Insights from Upload"):
+                with st.spinner("Analyzing uploaded file..."):
                     insights = generate_insights(df, None)  # Pass None instead of insight_option
                     st.session_state["last_insights"] = insights
+                    st.session_state["last_file_source"] = f"Manual Upload: {uploaded_file.name}"
 
                 # Dynamically display chart based on data structure
                 display_chart(df)
@@ -361,17 +531,40 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
         # Display insights and charts after the initial options for data source
         if "last_insights" in st.session_state:
-            st.subheader("AI-Generated Insights")
+            st.markdown("---")
+            st.subheader("🤖 AI-Generated Insights")
+            
+            # Show data source
+            if "last_file_source" in st.session_state:
+                st.caption(f"📁 Data source: {st.session_state['last_file_source']}")
+            
+            # Display insights
             for section in st.session_state["last_insights"].split("\n"):
                 if section.strip():
                     # Display raw section using st.text to avoid Markdown processing
                     st.text(section.strip())
 
             if "last_model_used" in st.session_state:
-                st.caption(f"Model used: {st.session_state['last_model_used']}")
+                st.caption(f"🤖 Model used: {st.session_state['last_model_used']}")
 
-            if st.button("Sync to Xero"):
-                st.success("✅ Data has been synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
+            # Show data preview if available
+            if "current_data" in st.session_state:
+                with st.expander("📊 View Data Preview"):
+                    st.dataframe(st.session_state["current_data"].head(10))
+                
+                # Display chart
+                display_chart(st.session_state["current_data"])
+
+            # Sync options
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📤 Sync to Xero"):
+                    st.success("✅ Data has been synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
+            
+            with col2:
+                if st.session_state.get("sharepoint_connected", False):
+                    if st.button("📁 Save to SharePoint"):
+                        st.success("✅ Analysis results saved to your SharePoint folder for future reference.")
 
     def display_chart(data, insight_option=None):
         """Dynamically analyze the data and display the best chart."""
@@ -659,7 +852,7 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
             st.markdown("**Alert Purpose:**")
             purpose = st.radio(
                 "Choose task type:",
-                ["Monthly Closure", "Outstanding Items Follow-up", "Customer Satisfaction Survey"],
+                ["Monthly Closure", "Outstanding Items Follow-up", "Customer Satisfaction Survey", "SharePoint Data Sync Reminder"],
                 help="Select the type of automated alert to schedule"
             )
             
@@ -760,6 +953,16 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
                     },
                     {
                         "client": "Growth Partners LLC",
+                        "purpose": "SharePoint Data Sync Reminder",
+                        "schedule_type": "Recurring",
+                        "frequency": "Weekly",
+                        "priority": "Medium",
+                        "status": "Active",
+                        "created_date": "2025-07-25",
+                        "next_trigger": "2025-08-02"
+                    },
+                    {
+                        "client": "TechStart Solutions Pty Ltd",
                         "purpose": "Customer Satisfaction Survey",
                         "schedule_type": "One-time",
                         "date": "2025-08-10",
@@ -805,13 +1008,13 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Alerts", "12", "+3")
+                st.metric("Total Alerts", "15", "+6")
             with col2:
-                st.metric("Active Alerts", "8", "+1")
+                st.metric("Active Alerts", "11", "+4")
             with col3:
-                st.metric("Completed This Month", "24", "+8")
+                st.metric("Completed This Month", "28", "+12")
             with col4:
-                st.metric("Success Rate", "94%", "+2%")
+                st.metric("Success Rate", "96%", "+4%")
             
             st.markdown("**Recent Alert Activity:**")
             
@@ -819,8 +1022,9 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
             recent_activity = [
                 {"date": "2025-08-01 09:00", "client": "TechStart Solutions", "action": "Monthly Closure Alert Triggered", "status": "✅ Completed"},
                 {"date": "2025-08-01 08:30", "client": "Digital Dynamics", "action": "Outstanding Items Follow-up", "status": "📧 Email Sent"},
-                {"date": "2025-07-31 16:00", "client": "Growth Partners", "action": "Customer Survey Scheduled", "status": "⏳ Pending"},
-                {"date": "2025-07-31 14:15", "client": "Innovation Labs", "action": "Monthly Closure Reminder", "status": "✅ Completed"},
+                {"date": "2025-08-01 08:00", "client": "Growth Partners", "action": "SharePoint Sync Reminder Sent", "status": "📧 Email Sent"},
+                {"date": "2025-07-31 16:00", "client": "Innovation Labs", "action": "SharePoint Data Upload Reminder", "status": "⏳ Pending"},
+                {"date": "2025-07-31 14:15", "client": "TechStart Solutions", "action": "Monthly Closure Reminder", "status": "✅ Completed"},
             ]
             
             for activity in recent_activity:
