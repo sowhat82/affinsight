@@ -65,7 +65,7 @@ if st.session_state.logged_in:
         st.session_state.show_account_message = False
 
     # --- PAGE SELECTION ---
-    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights", "🔔 Alerts Workflow"])
+    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights", "🔔 Alerts Workflow", "📋 Client Summary"])
 
     # --- LLM PROMPT FUNCTION ---
     def generate_insights(data, option):
@@ -195,6 +195,95 @@ Be professional, specific, and reference the actual client data provided.
 
 **Risk Assessment:**
 Medium-risk engagement with strong revenue foundation ($850K annually) but typical growing tech company challenges. Cash flow volatility presents immediate concern requiring attention. Growth trajectory suggests good long-term partnership potential."""
+
+    # --- CLIENT SUMMARY FUNCTION ---
+    def generate_client_summary(business_name, contact_person, industry, annual_revenue, num_employees, key_challenges):
+        prompt = f"""
+You are a senior business consultant creating a one-page client summary for Affintive staff preparing for client meetings.
+
+Client: {business_name} | Industry: {industry} | Revenue: ${annual_revenue:,.0f} | Staff: {num_employees} | Challenges: {key_challenges}
+
+Generate a comprehensive client summary in this exact format:
+
+**Business Profile:**
+• Company Size: [Classify as Micro/Small/Medium/Large based on revenue and employees]
+• Industry Position: [Brief assessment of their market position and competitive landscape]
+• Financial Health: [Revenue assessment and growth indicators]
+
+**Digital Maturity Assessment:**
+• Technology Adoption: [Rate as Basic/Developing/Advanced/Sophisticated - 1-2 sentences]
+• Systems Integration: [Assessment of current digital infrastructure and integration needs]
+• Automation Readiness: [Evaluation of potential for process automation and digital transformation]
+
+**Key Watch Areas:**
+• Priority 1: [Most critical area requiring immediate attention]
+• Priority 2: [Secondary concern that needs monitoring]
+• Priority 3: [Third area of focus for medium-term planning]
+
+**Risk & Opportunity Matrix:**
+• Primary Risk: [Main business risk to be aware of in interactions]
+• Growth Opportunity: [Key opportunity for service expansion or upselling]
+• Partnership Potential: [Assessment of long-term relationship prospects]
+
+**Meeting Preparation Notes:**
+• Discussion Topics: [2-3 key areas to focus on in upcoming meetings]
+• Value Propositions: [Specific Affintive services most relevant to this client]
+• Relationship Status: [Current engagement level and next steps for relationship building]
+
+Keep each point concise (10-25 words) and professionally actionable for staff preparation.
+"""
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        for model in models:
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            try:
+                response = requests.post(OPENROUTER_API_URL, json=payload, headers=headers)
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get('choices'):
+                        return result['choices'][0]['message']['content'].strip()
+                    else:
+                        continue
+                else:
+                    continue
+            except Exception as e:
+                st.warning(f"❌ Model failed: {model} – {e}")
+                continue
+
+        # Fallback to simulated summary if API fails
+        return """**Business Profile:**
+• Company Size: Small business with solid revenue foundation and efficient team structure
+• Industry Position: Competitive software development sector with established client relationships and growth trajectory
+• Financial Health: Strong $850K annual revenue indicates stable operations with scaling potential
+
+**Digital Maturity Assessment:**
+• Technology Adoption: Developing - Using standard development tools but lacking advanced analytics and automation
+• Systems Integration: Basic integration with room for improvement in workflow optimization and data connectivity
+• Automation Readiness: Good potential for implementing automated reporting, project management, and client communication systems
+
+**Key Watch Areas:**
+• Priority 1: Cash flow management during project-based revenue cycles affecting working capital stability
+• Priority 2: Team scaling challenges with current 12-person structure requiring operational framework development
+• Priority 3: Client expectation management and project delivery timelines needing systematic improvement processes
+
+**Risk & Opportunity Matrix:**
+• Primary Risk: Cash flow volatility could impact growth investments and operational stability during lean periods
+• Growth Opportunity: Strong demand for financial forecasting and operational optimization consulting services
+• Partnership Potential: High - established business with growth mindset and willingness to invest in improvements
+
+**Meeting Preparation Notes:**
+• Discussion Topics: Financial forecasting solutions, operational scaling frameworks, and project management optimization systems
+• Value Propositions: Cash flow management tools, team productivity consulting, and automated reporting solutions
+• Relationship Status: Early engagement phase with high potential for comprehensive service partnership and long-term growth"""
 
     # --- FILE UPLOAD & DATA PREVIEW ---
     def upload_and_preview():
@@ -372,9 +461,31 @@ Medium-risk engagement with strong revenue foundation ($850K annually) but typic
                 
                 st.write(f"**Key Challenges:** {client_data.get('key_challenges', 'N/A')}")
 
-            # Staff analysis button
-            if st.button("🔍 Generate Customer's Pain Point Analysis", help="For Affintive staff use only"):
-                with st.spinner("Analyzing client data..."):
+            # Primary staff analysis button (Client Summary - main action per DOA)
+            if st.button("📋 Generate Client Summary", type="primary", help="Quick client profile for meeting preparation"):
+                with st.spinner("Generating comprehensive client summary..."):
+                    # Generate client summary using the new function
+                    summary = generate_client_summary(
+                        client_data.get('business_name', ''),
+                        client_data.get('contact_person', ''),
+                        client_data.get('industry', ''),
+                        client_data.get('annual_revenue', 0),
+                        client_data.get('num_employees', 0),
+                        client_data.get('key_challenges', '')
+                    )
+                    
+                    st.subheader("📊 Client Summary Report") 
+                    # Display the summary with proper formatting
+                    for section in summary.split("\n"):
+                        if section.strip():
+                            st.text(section.strip())
+
+                    st.success("✅ Client summary generated - ready for meeting preparation!")
+
+            # Secondary analysis button (Deep Analysis - secondary action per DOA)
+            st.markdown("---")
+            if st.button("🔍 Deep Pain Point Analysis", help="Detailed onboarding analysis for comprehensive planning"):
+                with st.spinner("Analyzing client data for detailed insights..."):
                     # Generate actual AI insights based on the provided data
                     insights = generate_onboarding_insights(
                         client_data.get('business_name', ''),
@@ -385,19 +496,143 @@ Medium-risk engagement with strong revenue foundation ($850K annually) but typic
                         client_data.get('key_challenges', '')
                     )
                     
-                    st.subheader("🎯 AI-Generated Staff Insights")
+                    st.subheader("🎯 Detailed Pain Point Analysis")
                     # Display the insights with proper formatting
                     for section in insights.split("\n"):
                         if section.strip():
                             st.text(section.strip())
 
-                    st.info("⚠️ **Staff Reminder:** Ensure proper due diligence is conducted before making recommendations to client.")
+                    st.info("⚠️ **Staff Reminder:** This detailed analysis is for comprehensive strategic planning and due diligence.")
 
         else:
             st.info("👆 Please submit client information above to proceed with staff analysis")
 
         st.markdown("---")
         st.caption("💡 This prototype demonstrates the client-to-staff workflow. Document collection can be handled separately in the full implementation.")
+
+    # --- CLIENT SUMMARY PAGE ---
+    def client_summary():
+        st.subheader("📋 Client Summary Dashboard")
+        st.caption("Quick reference client profile for staff preparation")
+
+        # Client selection dropdown
+        st.markdown("**Select Client:**")
+        client_options = [
+            "TechStart Solutions Pty Ltd",
+            "Digital Dynamics Inc", 
+            "Growth Partners LLC",
+            "Innovation Labs Co",
+            "Future Finance Group"
+        ]
+        
+        selected_client = st.selectbox("Choose client to view summary", client_options)
+        
+        # Mock client data based on selection
+        client_profiles = {
+            "TechStart Solutions Pty Ltd": {
+                "business_name": "TechStart Solutions Pty Ltd",
+                "contact_person": "Sarah Johnson",
+                "industry": "Software Development & IT Services",
+                "annual_revenue": 850000.00,
+                "num_employees": 12,
+                "key_challenges": "Cash flow management during project cycles, scaling team efficiently, managing client expectations and project timelines, need better financial forecasting tools"
+            },
+            "Digital Dynamics Inc": {
+                "business_name": "Digital Dynamics Inc",
+                "contact_person": "Michael Chen",
+                "industry": "Digital Marketing & E-commerce",
+                "annual_revenue": 1250000.00,
+                "num_employees": 18,
+                "key_challenges": "Rapid growth scaling issues, need for better financial controls, client acquisition cost optimization, team productivity improvement"
+            },
+            "Growth Partners LLC": {
+                "business_name": "Growth Partners LLC",
+                "contact_person": "Amanda Rodriguez",
+                "industry": "Business Consulting & Strategy",
+                "annual_revenue": 2100000.00,
+                "num_employees": 25,
+                "key_challenges": "Complex project portfolio management, need for advanced analytics, client reporting automation, operational efficiency improvements"
+            },
+            "Innovation Labs Co": {
+                "business_name": "Innovation Labs Co", 
+                "contact_person": "David Kim",
+                "industry": "Technology R&D & Product Development",
+                "annual_revenue": 680000.00,
+                "num_employees": 8,
+                "key_challenges": "R&D budget allocation optimization, project ROI tracking, intellectual property management, funding preparation"
+            },
+            "Future Finance Group": {
+                "business_name": "Future Finance Group",
+                "contact_person": "Lisa Thompson",
+                "industry": "Financial Services & Fintech",
+                "annual_revenue": 3200000.00,
+                "num_employees": 35,
+                "key_challenges": "Regulatory compliance management, digital transformation initiatives, risk management optimization, customer onboarding automation"
+            }
+        }
+        
+        # Get selected client data
+        client_data = client_profiles[selected_client]
+        
+        # Display client data summary in a compact format with fixed industry display
+        st.markdown("**Client Overview:**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Annual Revenue", f"${client_data['annual_revenue']:,.0f}")
+        with col2:
+            st.metric("Employees", f"{client_data['num_employees']}")
+        with col3:
+            st.markdown("**Industry:**")
+            st.caption(client_data['industry'])
+        
+        st.markdown(f"**Contact:** {client_data['contact_person']}")
+        
+        # Main summary generation button (primary action)
+        if st.button("📋 Generate Client Summary", type="primary", help="Quick one-page summary for meeting preparation"):
+            with st.spinner("Generating comprehensive client summary..."):
+                # Generate actual AI summary based on the selected client data
+                summary = generate_client_summary(
+                    client_data.get('business_name', ''),
+                    client_data.get('contact_person', ''),
+                    client_data.get('industry', ''),
+                    client_data.get('annual_revenue', 0),
+                    client_data.get('num_employees', 0),
+                    client_data.get('key_challenges', '')
+                )
+                
+                st.subheader("📊 Client Summary Report")
+                # Display the summary with proper formatting
+                for section in summary.split("\n"):
+                    if section.strip():
+                        st.text(section.strip())
+
+                st.success("✅ Client summary generated successfully!")
+                st.info("💡 **Usage:** This summary is optimized for quick reference before client meetings, calls, or strategic planning sessions.")
+        
+        # Secondary action - Deep analysis (existing functionality) 
+        st.markdown("---")
+        if st.button("🔍 Deep Pain Point Analysis", help="Detailed onboarding analysis (DYN-10)"):
+            with st.spinner("Generating detailed pain point analysis..."):
+                # Use existing detailed analysis function
+                insights = generate_onboarding_insights(
+                    client_data.get('business_name', ''),
+                    client_data.get('contact_person', ''),
+                    client_data.get('industry', ''),
+                    client_data.get('annual_revenue', 0),
+                    client_data.get('num_employees', 0),
+                    client_data.get('key_challenges', '')
+                )
+                
+                st.subheader("🎯 Detailed Pain Point Analysis")
+                # Display the insights with proper formatting
+                for section in insights.split("\n"):
+                    if section.strip():
+                        st.text(section.strip())
+
+                st.info("⚠️ **Staff Reminder:** This is a detailed analysis for comprehensive client onboarding and strategic planning.")
+        
+        st.markdown("---")
+        st.caption("💡 **Quick Summary** is the main tool for meeting prep. **Deep Analysis** provides comprehensive insights for strategic planning.")
 
     # --- ALERTS WORKFLOW PAGE ---
     def alerts_workflow():
@@ -624,3 +859,6 @@ Medium-risk engagement with strong revenue foundation ($850K annually) but typic
         
     elif page == "🔔 Alerts Workflow":
         alerts_workflow()
+
+    elif page == "📋 Client Summary":
+        client_summary()
