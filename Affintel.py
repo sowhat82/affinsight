@@ -65,7 +65,7 @@ if st.session_state.logged_in:
         st.session_state.show_account_message = False
 
     # --- PAGE SELECTION ---
-    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights"])
+    page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights", "🔔 Alerts Workflow"])
 
     # --- LLM PROMPT FUNCTION ---
     def generate_insights(data, option):
@@ -399,6 +399,216 @@ Medium-risk engagement with strong revenue foundation ($850K annually) but typic
         st.markdown("---")
         st.caption("💡 This prototype demonstrates the client-to-staff workflow. Document collection can be handled separately in the full implementation.")
 
+    # --- ALERTS WORKFLOW PAGE ---
+    def alerts_workflow():
+        st.subheader("🔔 Smart Alerts Workflow")
+        st.caption("Automated follow-ups and task scheduling for account managers")
+
+        # Create tabs for different sections
+        tab1, tab2, tab3 = st.tabs(["📅 Create New Alert", "📋 Active Alerts", "📊 Alert Analytics"])
+
+        with tab1:
+            st.markdown("**Schedule New Alert:**")
+            
+            # Client selection
+            client_options = [
+                "TechStart Solutions Pty Ltd",
+                "Digital Dynamics Inc",
+                "Growth Partners LLC",
+                "Innovation Labs Co",
+                "Future Finance Group"
+            ]
+            selected_client = st.selectbox("Select Client", client_options)
+            
+            # Purpose/Task selection
+            st.markdown("**Alert Purpose:**")
+            purpose = st.radio(
+                "Choose task type:",
+                ["Monthly Closure", "Outstanding Items Follow-up", "Customer Satisfaction Survey"],
+                help="Select the type of automated alert to schedule"
+            )
+            
+            # Scheduling options
+            st.markdown("**Scheduling Options:**")
+            schedule_type = st.radio(
+                "Schedule Type:",
+                ["One-time", "Recurring"],
+                horizontal=True
+            )
+            
+            if schedule_type == "One-time":
+                col1, col2 = st.columns(2)
+                with col1:
+                    alert_date = st.date_input("Alert Date")
+                with col2:
+                    alert_time = st.time_input("Alert Time")
+            else:
+                frequency = st.selectbox(
+                    "Frequency:",
+                    ["Daily", "Weekly", "Monthly", "Quarterly"]
+                )
+                if frequency == "Weekly":
+                    day_of_week = st.selectbox(
+                        "Day of Week:",
+                        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+                    )
+                elif frequency == "Monthly":
+                    day_of_month = st.number_input(
+                        "Day of Month:", 
+                        min_value=1, 
+                        max_value=28, 
+                        value=1
+                    )
+            
+            # Additional details
+            st.markdown("**Alert Details:**")
+            custom_message = st.text_area(
+                "Custom Message (optional):",
+                placeholder="Add any specific instructions or notes for this alert..."
+            )
+            
+            # Priority level
+            priority = st.select_slider(
+                "Priority Level:",
+                options=["Low", "Medium", "High", "Critical"],
+                value="Medium"
+            )
+            
+            # Create alert button
+            if st.button("🔔 Schedule Alert", type="primary"):
+                # Store alert in session state (in real app, this would go to database)
+                if "alerts" not in st.session_state:
+                    st.session_state["alerts"] = []
+                
+                new_alert = {
+                    "client": selected_client,
+                    "purpose": purpose,
+                    "schedule_type": schedule_type,
+                    "date": str(alert_date) if schedule_type == "One-time" else None,
+                    "time": str(alert_time) if schedule_type == "One-time" else None,
+                    "frequency": frequency if schedule_type == "Recurring" else None,
+                    "custom_message": custom_message,
+                    "priority": priority,
+                    "status": "Active",
+                    "created_date": "2025-08-01"  # Mock current date
+                }
+                
+                st.session_state["alerts"].append(new_alert)
+                st.success(f"✅ Alert scheduled successfully for {selected_client}!")
+                st.info(f"📋 **Alert Summary:** {purpose} - {schedule_type} - Priority: {priority}")
+
+        with tab2:
+            st.markdown("**Active Alerts Overview:**")
+            
+            # Mock some default alerts if none exist
+            if "alerts" not in st.session_state or len(st.session_state["alerts"]) == 0:
+                st.session_state["alerts"] = [
+                    {
+                        "client": "TechStart Solutions Pty Ltd",
+                        "purpose": "Monthly Closure",
+                        "schedule_type": "Recurring",
+                        "frequency": "Monthly",
+                        "priority": "High",
+                        "status": "Active",
+                        "created_date": "2025-07-15",
+                        "next_trigger": "2025-08-15"
+                    },
+                    {
+                        "client": "Digital Dynamics Inc",
+                        "purpose": "Outstanding Items Follow-up",
+                        "schedule_type": "Recurring",
+                        "frequency": "Weekly",
+                        "priority": "Medium",
+                        "status": "Active",
+                        "created_date": "2025-07-20",
+                        "next_trigger": "2025-08-05"
+                    },
+                    {
+                        "client": "Growth Partners LLC",
+                        "purpose": "Customer Satisfaction Survey",
+                        "schedule_type": "One-time",
+                        "date": "2025-08-10",
+                        "priority": "Low",
+                        "status": "Pending",
+                        "created_date": "2025-08-01"
+                    }
+                ]
+            
+            # Display alerts in a table format
+            if st.session_state["alerts"]:
+                for i, alert in enumerate(st.session_state["alerts"]):
+                    with st.expander(f"🔔 {alert['client']} - {alert['purpose']} ({alert['priority']} Priority)"):
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        
+                        with col1:
+                            st.write(f"**Client:** {alert['client']}")
+                            st.write(f"**Task:** {alert['purpose']}")
+                            st.write(f"**Type:** {alert['schedule_type']}")
+                        
+                        with col2:
+                            if alert['schedule_type'] == 'Recurring':
+                                st.write(f"**Frequency:** {alert.get('frequency', 'N/A')}")
+                                st.write(f"**Next Trigger:** {alert.get('next_trigger', 'N/A')}")
+                            else:
+                                st.write(f"**Date:** {alert.get('date', 'N/A')}")
+                                st.write(f"**Time:** {alert.get('time', 'N/A')}")
+                            st.write(f"**Status:** {alert['status']}")
+                        
+                        with col3:
+                            if st.button("✏️ Edit", key=f"edit_{i}"):
+                                st.info("Edit functionality would open in a modal")
+                            if st.button("🗑️ Delete", key=f"delete_{i}"):
+                                st.session_state["alerts"].pop(i)
+                                st.rerun()
+            else:
+                st.info("No active alerts. Create your first alert in the 'Create New Alert' tab.")
+
+        with tab3:
+            st.markdown("**Alert Analytics & Performance:**")
+            
+            # Mock analytics data
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Alerts", "12", "+3")
+            with col2:
+                st.metric("Active Alerts", "8", "+1")
+            with col3:
+                st.metric("Completed This Month", "24", "+8")
+            with col4:
+                st.metric("Success Rate", "94%", "+2%")
+            
+            st.markdown("**Recent Alert Activity:**")
+            
+            # Mock recent activity
+            recent_activity = [
+                {"date": "2025-08-01 09:00", "client": "TechStart Solutions", "action": "Monthly Closure Alert Triggered", "status": "✅ Completed"},
+                {"date": "2025-08-01 08:30", "client": "Digital Dynamics", "action": "Outstanding Items Follow-up", "status": "📧 Email Sent"},
+                {"date": "2025-07-31 16:00", "client": "Growth Partners", "action": "Customer Survey Scheduled", "status": "⏳ Pending"},
+                {"date": "2025-07-31 14:15", "client": "Innovation Labs", "action": "Monthly Closure Reminder", "status": "✅ Completed"},
+            ]
+            
+            for activity in recent_activity:
+                with st.container():
+                    col1, col2, col3 = st.columns([2, 3, 2])
+                    with col1:
+                        st.text(activity["date"])
+                    with col2:
+                        st.text(f"{activity['client']}: {activity['action']}")
+                    with col3:
+                        st.text(activity["status"])
+                    st.divider()
+            
+            # Time savings calculation
+            st.markdown("**⏰ Time Savings Analysis:**")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info("**Manual Process:** ~45 minutes per follow-up")
+            with col2:
+                st.success("**Automated Process:** ~5 minutes per follow-up")
+            
+            st.metric("Estimated Monthly Time Saved", "16 hours", "+4 hours")
+
     # --- MAIN APP ROUTING ---
     st.set_page_config(page_title="Affintel", layout="centered")
 
@@ -411,3 +621,6 @@ Medium-risk engagement with strong revenue foundation ($850K annually) but typic
         ---
         **Security note:** Your data is transferred securely and is not stored.
         """)
+        
+    elif page == "🔔 Alerts Workflow":
+        alerts_workflow()
