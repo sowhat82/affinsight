@@ -66,27 +66,6 @@ if st.session_state.logged_in:
 
     # --- PAGE SELECTION ---
     page = st.sidebar.radio("Navigation", ["📂 Onboarding Checklist", "📊 Financial Insights", "🔔 Alerts Workflow", "📋 Client Summary"])
-    
-    # SharePoint connection status in sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**📁 Data Sources:**")
-    
-    # Xero status (always available in demo)
-    st.sidebar.markdown("✅ Xero: Connected")
-    
-    # SharePoint status
-    if st.session_state.get("sharepoint_connected", False):
-        st.sidebar.markdown("✅ SharePoint: Connected")
-        if st.session_state.get("sharepoint_last_sync"):
-            st.sidebar.caption(f"Last sync: {st.session_state['sharepoint_last_sync']}")
-        
-        # Show sync reminder in sidebar if needed
-        st.sidebar.caption("⚠️ 4 days since last update")
-    else:
-        st.sidebar.markdown("🔌 SharePoint: Not connected")
-        st.sidebar.caption("Connect in Financial Insights")
-    
-    st.sidebar.markdown("📤 Manual Upload: Available")
 
     # --- LLM PROMPT FUNCTION ---
     def generate_insights(data, option):
@@ -308,13 +287,12 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
     # --- FILE UPLOAD & DATA PREVIEW ---
     def upload_and_preview():
-        st.subheader("Upload your financial data or fetch from multiple sources")
+        st.subheader("Upload your financial data or fetch from Xero")
 
         st.markdown("""
         **Choose your data source:**
         - Fetch current year data from Xero.
-        - Synchronize with your SharePoint folder.
-        - Upload your own Excel or CSV file manually.
+        - Upload your own Excel or CSV file.
         """)
 
         # Add options for filtering insights
@@ -345,151 +323,6 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
                 })
             }
 
-        # SharePoint synchronization section
-        st.markdown("---")
-        st.markdown("**📁 SharePoint Integration:**")
-        
-        # SharePoint connection status
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.markdown("**SharePoint Folder Status:**")
-            if "sharepoint_connected" not in st.session_state:
-                st.session_state["sharepoint_connected"] = False
-            
-            if st.session_state["sharepoint_connected"]:
-                st.success("🔗 Connected to SharePoint folder: `/Financial Data/Monthly Reports`")
-                st.caption("Last sync: 2025-07-28 14:30 (4 days ago)")
-                
-                # Show sync reminder if data is old
-                if True:  # Mock condition for old data
-                    st.warning("⚠️ **Sync Reminder:** No new files detected in 4 days. Please ensure your latest financial data is uploaded to SharePoint.")
-                
-            else:
-                st.info("🔌 SharePoint folder not connected. Click 'Connect SharePoint' to set up automatic synchronization.")
-        
-        with col2:
-            if st.session_state.get("sharepoint_connected", False):
-                if st.button("🔄 Sync Now", help="Manually trigger SharePoint synchronization"):
-                    with st.spinner("Synchronizing with SharePoint..."):
-                        # Simulate sync process
-                        import time
-                        time.sleep(2)
-                        
-                        # Mock new files found
-                        st.session_state["sharepoint_files"] = [
-                            {"name": "July_2025_Payroll.xlsx", "modified": "2025-07-31", "size": "45 KB", "type": "Payroll"},
-                            {"name": "Q3_2025_Expenses.csv", "modified": "2025-07-30", "size": "23 KB", "type": "Expenses"},
-                            {"name": "Revenue_Report_July.xlsx", "modified": "2025-07-29", "size": "67 KB", "type": "Revenue"}
-                        ]
-                        
-                        st.success("✅ SharePoint sync completed! Found 3 new files.")
-                        st.session_state["sharepoint_last_sync"] = "2025-08-01 " + "12:00"
-                        st.rerun()
-                
-                if st.button("⚙️ Settings", help="Configure SharePoint sync settings"):
-                    st.info("SharePoint sync settings would open in a modal")
-                    
-            else:
-                if st.button("🔗 Connect SharePoint", type="primary", help="Set up SharePoint folder synchronization"):
-                    with st.spinner("Connecting to SharePoint..."):
-                        # Simulate connection process
-                        import time
-                        time.sleep(2)
-                        st.session_state["sharepoint_connected"] = True
-                        st.session_state["sharepoint_folder"] = "/Financial Data/Monthly Reports"
-                        st.success("✅ SharePoint connected successfully!")
-                        st.rerun()
-
-        # Display SharePoint files if available
-        if st.session_state.get("sharepoint_files"):
-            st.markdown("**📋 Files from SharePoint:**")
-            
-            # Create expandable file list
-            with st.expander(f"📁 SharePoint Files ({len(st.session_state['sharepoint_files'])} files found)", expanded=True):
-                for i, file in enumerate(st.session_state["sharepoint_files"]):
-                    with st.container():
-                        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
-                        
-                        with col1:
-                            st.write(f"📄 **{file['name']}**")
-                        with col2:
-                            st.caption(f"Modified: {file['modified']}")
-                        with col3:
-                            st.caption(f"Size: {file['size']}")
-                        with col4:
-                            if st.button("📊 Analyze", key=f"analyze_sp_{i}", help=f"Analyze {file['name']}"):
-                                # Mock data based on file type
-                                if file['type'] == 'Payroll':
-                                    mock_data = pd.DataFrame({
-                                        "Employee": ["John Doe", "Jane Smith", "Mike Johnson", "Sarah Wilson"],
-                                        "Salary": [5200, 4800, 5500, 4600],
-                                        "Bonuses": [520, 480, 550, 460]
-                                    })
-                                elif file['type'] == 'Expenses':
-                                    mock_data = pd.DataFrame({
-                                        "Category": ["Travel", "Office Supplies", "Utilities", "Software"],
-                                        "Amount": [1500, 850, 650, 1200]
-                                    })
-                                else:  # Revenue
-                                    mock_data = pd.DataFrame({
-                                        "Month": ["May", "June", "July"],
-                                        "Revenue": [15000, 18000, 16500]
-                                    })
-                                
-                                st.session_state["current_data"] = mock_data
-                                st.session_state["current_file"] = file['name']
-                                
-                                with st.spinner(f"Analyzing {file['name']}..."):
-                                    insights = generate_insights(mock_data, file['type'])
-                                    st.session_state["last_insights"] = insights
-                                    st.session_state["last_file_source"] = f"SharePoint: {file['name']}"
-                                
-                                st.success(f"✅ Analysis completed for {file['name']}")
-                                st.rerun()
-                        
-                        st.divider()
-
-        # SharePoint sync configuration
-        if st.session_state.get("sharepoint_connected", False):
-            st.markdown("---")
-            with st.expander("🔧 SharePoint Sync Configuration"):
-                st.markdown("**Automatic Sync Settings:**")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    sync_frequency = st.selectbox(
-                        "Sync Frequency:",
-                        ["Hourly", "Daily", "Weekly", "Manual only"],
-                        index=1
-                    )
-                    
-                    reminder_threshold = st.number_input(
-                        "Send reminder after (days without new data):",
-                        min_value=1,
-                        max_value=30,
-                        value=3
-                    )
-                
-                with col2:
-                    file_types = st.multiselect(
-                        "File types to sync:",
-                        ["Excel (.xlsx)", "CSV (.csv)", "PDF (.pdf)"],
-                        default=["Excel (.xlsx)", "CSV (.csv)"]
-                    )
-                    
-                    notification_email = st.text_input(
-                        "Notification email:",
-                        value=st.session_state.get("username", "") + "@example.com"
-                    )
-                
-                if st.button("💾 Save Sync Settings"):
-                    st.success("✅ SharePoint sync settings saved successfully!")
-                    st.info(f"📧 You'll receive reminders at {notification_email} if no new data is detected for {reminder_threshold} days.")
-
-        st.markdown("---")
-
-        # Manual file upload section
-        st.markdown("**📤 Manual File Upload:**")
         uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
         if uploaded_file:
             try:
@@ -504,14 +337,11 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
             st.write("Preview of uploaded data:")
             st.dataframe(df.head())
-            st.session_state["current_data"] = df
-            st.session_state["current_file"] = uploaded_file.name
 
-            if st.button("Generate Insights from Upload"):
-                with st.spinner("Analyzing uploaded file..."):
+            if st.button("Generate Insights"):
+                with st.spinner("Analyzing..."):
                     insights = generate_insights(df, None)  # Pass None instead of insight_option
                     st.session_state["last_insights"] = insights
-                    st.session_state["last_file_source"] = f"Manual Upload: {uploaded_file.name}"
 
                 # Dynamically display chart based on data structure
                 display_chart(df)
@@ -531,40 +361,17 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
 
         # Display insights and charts after the initial options for data source
         if "last_insights" in st.session_state:
-            st.markdown("---")
-            st.subheader("🤖 AI-Generated Insights")
-            
-            # Show data source
-            if "last_file_source" in st.session_state:
-                st.caption(f"📁 Data source: {st.session_state['last_file_source']}")
-            
-            # Display insights
+            st.subheader("AI-Generated Insights")
             for section in st.session_state["last_insights"].split("\n"):
                 if section.strip():
                     # Display raw section using st.text to avoid Markdown processing
                     st.text(section.strip())
 
             if "last_model_used" in st.session_state:
-                st.caption(f"🤖 Model used: {st.session_state['last_model_used']}")
+                st.caption(f"Model used: {st.session_state['last_model_used']}")
 
-            # Show data preview if available
-            if "current_data" in st.session_state:
-                with st.expander("📊 View Data Preview"):
-                    st.dataframe(st.session_state["current_data"].head(10))
-                
-                # Display chart
-                display_chart(st.session_state["current_data"])
-
-            # Sync options
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📤 Sync to Xero"):
-                    st.success("✅ Data has been synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
-            
-            with col2:
-                if st.session_state.get("sharepoint_connected", False):
-                    if st.button("📁 Save to SharePoint"):
-                        st.success("✅ Analysis results saved to your SharePoint folder for future reference.")
+            if st.button("Sync to Xero"):
+                st.success("✅ Data has been synced to Xero. A copy of the data has been forwarded to Affintive's internal system.")
 
     def display_chart(data, insight_option=None):
         """Dynamically analyze the data and display the best chart."""
@@ -852,7 +659,7 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
             st.markdown("**Alert Purpose:**")
             purpose = st.radio(
                 "Choose task type:",
-                ["Monthly Closure", "Outstanding Items Follow-up", "Customer Satisfaction Survey", "SharePoint Data Sync Reminder"],
+                ["Monthly Closure", "Outstanding Items Follow-up", "Customer Satisfaction Survey"],
                 help="Select the type of automated alert to schedule"
             )
             
@@ -953,16 +760,6 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
                     },
                     {
                         "client": "Growth Partners LLC",
-                        "purpose": "SharePoint Data Sync Reminder",
-                        "schedule_type": "Recurring",
-                        "frequency": "Weekly",
-                        "priority": "Medium",
-                        "status": "Active",
-                        "created_date": "2025-07-25",
-                        "next_trigger": "2025-08-02"
-                    },
-                    {
-                        "client": "TechStart Solutions Pty Ltd",
                         "purpose": "Customer Satisfaction Survey",
                         "schedule_type": "One-time",
                         "date": "2025-08-10",
@@ -1002,188 +799,50 @@ Keep each point concise (10-25 words) and professionally actionable for staff pr
                 st.info("No active alerts. Create your first alert in the 'Create New Alert' tab.")
 
         with tab3:
-            st.markdown("**📊 Executive Analytics Dashboard**")
-            st.caption("Performance metrics for Affintive leadership team")
+            st.markdown("**Alert Analytics & Performance:**")
             
-            # Key Performance Metrics
-            st.markdown("**🎯 Key Performance Indicators:**")
+            # Mock analytics data
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Tasks Completed On Time", "87%", "+5%")
-                st.caption("Target: >85%")
+                st.metric("Total Alerts", "12", "+3")
             with col2:
-                st.metric("Client Satisfaction (NPS)", "4.3/5.0", "+0.2")
-                st.caption("Target: >4.0")
+                st.metric("Active Alerts", "8", "+1")
             with col3:
-                st.metric("Tool Access Rate", "92%", "+8%")
-                st.caption("Daily active usage")
+                st.metric("Completed This Month", "24", "+8")
             with col4:
-                st.metric("Client Account Signups", "12", "+3")
-                st.caption("This month")
-
-            # Task Completion Analytics
-            st.markdown("---")
-            st.markdown("**📈 Task Completion Analytics:**")
+                st.metric("Success Rate", "94%", "+2%")
             
-            # Task completion breakdown
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**Task Completion Rate by Type:**")
-                task_completion_data = {
-                    "Task Type": ["Monthly Closure", "Follow-ups", "Data Sync", "Surveys", "Custom Tasks"],
-                    "On Time %": [95, 88, 85, 72, 90],
-                    "Total Tasks": [24, 45, 38, 15, 28]
-                }
-                
-                completion_df = pd.DataFrame(task_completion_data)
-                st.dataframe(completion_df, use_container_width=True)
-                
-                # Overall completion rate
-                total_tasks = sum(task_completion_data["Total Tasks"])
-                weighted_completion = sum(task_completion_data["On Time %"][i] * task_completion_data["Total Tasks"][i] for i in range(len(task_completion_data["On Time %"]))) / total_tasks
-                st.info(f"**Overall Completion Rate: {weighted_completion:.1f}%** ({total_tasks} total tasks)")
+            st.markdown("**Recent Alert Activity:**")
             
-            with col2:
-                st.markdown("**Monthly Trend:**")
-                monthly_data = {
-                    "Month": ["May 2025", "Jun 2025", "Jul 2025", "Aug 2025"],
-                    "On Time %": [82, 85, 84, 87],
-                    "Total Tasks": [135, 142, 148, 150]
-                }
-                trend_df = pd.DataFrame(monthly_data)
-                st.dataframe(trend_df, use_container_width=True)
-                
-                # Trend analysis
-                improvement = monthly_data["On Time %"][-1] - monthly_data["On Time %"][0]
-                st.success(f"**+{improvement}% improvement** over 4 months")
-
-            # Client Satisfaction Metrics
-            st.markdown("---")
-            st.markdown("**⭐ Client Satisfaction Analytics:**")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.markdown("**NPS Rating Distribution:**")
-                nps_data = {
-                    "Rating": ["5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star"],
-                    "Count": [28, 15, 4, 2, 1],
-                    "Percentage": [56, 30, 8, 4, 2]
-                }
-                nps_df = pd.DataFrame(nps_data)
-                st.dataframe(nps_df, use_container_width=True)
-                
-                avg_rating = sum(nps_data["Count"][i] * (5-i) for i in range(5)) / sum(nps_data["Count"])
-                st.metric("Average Rating", f"{avg_rating:.2f}/5.0")
-            
-            with col2:
-                st.markdown("**Satisfaction by Client Type:**")
-                client_satisfaction = {
-                    "Client Segment": ["Tech Companies", "Consulting Firms", "Finance Services", "Retail/E-commerce"],
-                    "Avg Rating": [4.5, 4.2, 4.1, 4.3],
-                    "Response Rate": ["95%", "88%", "92%", "90%"]
-                }
-                satisfaction_df = pd.DataFrame(client_satisfaction)
-                st.dataframe(satisfaction_df, use_container_width=True)
-            
-            with col3:
-                st.markdown("**Feedback Themes:**")
-                feedback_themes = [
-                    "✅ AI insights very helpful (85%)",
-                    "✅ Time savings significant (78%)",
-                    "✅ Easy to use interface (72%)",
-                    "⚠️ Want more integrations (45%)",
-                    "⚠️ Mobile app requested (38%)"
-                ]
-                for theme in feedback_themes:
-                    st.text(theme)
-
-            # Usage Analytics
-            st.markdown("---")
-            st.markdown("**📱 Usage Analytics:**")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**Daily Tool Access Metrics:**")
-                usage_metrics = {
-                    "Metric": ["Daily Active Users", "Weekly Active Users", "Monthly Active Users", "Avg Session Duration", "Features Used/Session"],
-                    "Current": ["148", "234", "312", "12.5 min", "3.2"],
-                    "Target": ["150", "250", "350", "15 min", "4.0"],
-                    "Trend": ["↗️ +12%", "↗️ +8%", "↗️ +15%", "↗️ +2.1 min", "↗️ +0.5"]
-                }
-                usage_df = pd.DataFrame(usage_metrics)
-                st.dataframe(usage_df, use_container_width=True)
-            
-            with col2:
-                st.markdown("**Client Account Growth:**")
-                account_growth = {
-                    "Month": ["May 2025", "Jun 2025", "Jul 2025", "Aug 2025"],
-                    "New Signups": [8, 9, 11, 12],
-                    "Total Active": [45, 52, 61, 67],
-                    "Churn Rate": ["2%", "1%", "1%", "0%"]
-                }
-                growth_df = pd.DataFrame(account_growth)
-                st.dataframe(growth_df, use_container_width=True)
-                
-                st.success("**Zero churn rate** this month!")
-                st.info("**67 total active clients** (+22 in 4 months)")
-
-            # Recent Alert Activity (keeping existing functionality)
-            st.markdown("---")
-            st.markdown("**🔔 Recent Alert Activity:**")
-            
-            # Mock recent activity with completion status
+            # Mock recent activity
             recent_activity = [
-                {"date": "2025-08-02 09:15", "client": "TechStart Solutions", "action": "Monthly Closure Alert", "status": "✅ Completed On Time", "completion_time": "2 hours"},
-                {"date": "2025-08-02 08:45", "client": "Digital Dynamics", "action": "Outstanding Items Follow-up", "status": "✅ Completed On Time", "completion_time": "45 minutes"},
-                {"date": "2025-08-01 16:30", "client": "Growth Partners", "action": "SharePoint Sync Reminder", "status": "⏰ Completed Late", "completion_time": "3.5 hours"},
-                {"date": "2025-08-01 14:00", "client": "Innovation Labs", "action": "Customer Satisfaction Survey", "status": "✅ Completed On Time", "completion_time": "1 hour"},
-                {"date": "2025-08-01 10:20", "client": "Future Finance", "action": "Data Upload Reminder", "status": "⏳ In Progress", "completion_time": "N/A"},
+                {"date": "2025-08-01 09:00", "client": "TechStart Solutions", "action": "Monthly Closure Alert Triggered", "status": "✅ Completed"},
+                {"date": "2025-08-01 08:30", "client": "Digital Dynamics", "action": "Outstanding Items Follow-up", "status": "📧 Email Sent"},
+                {"date": "2025-07-31 16:00", "client": "Growth Partners", "action": "Customer Survey Scheduled", "status": "⏳ Pending"},
+                {"date": "2025-07-31 14:15", "client": "Innovation Labs", "action": "Monthly Closure Reminder", "status": "✅ Completed"},
             ]
             
             for activity in recent_activity:
                 with st.container():
-                    col1, col2, col3, col4 = st.columns([2, 3, 2, 1])
+                    col1, col2, col3 = st.columns([2, 3, 2])
                     with col1:
                         st.text(activity["date"])
                     with col2:
                         st.text(f"{activity['client']}: {activity['action']}")
                     with col3:
                         st.text(activity["status"])
-                    with col4:
-                        st.text(activity["completion_time"])
                     st.divider()
             
-            # Executive Summary Section
-            st.markdown("---")
-            st.markdown("**📋 Executive Summary:**")
-            
+            # Time savings calculation
+            st.markdown("**⏰ Time Savings Analysis:**")
             col1, col2 = st.columns(2)
             with col1:
-                st.success("**🎯 Performance Highlights:**")
-                st.text("• 87% on-time task completion (+5% vs target)")
-                st.text("• 4.3/5.0 client satisfaction (above 4.0 target)")
-                st.text("• 92% daily tool access rate")
-                st.text("• Zero client churn this month")
-                st.text("• 12 new client signups (+3 vs last month)")
+                st.info("**Manual Process:** ~45 minutes per follow-up")
+            with col2:
+                st.success("**Automated Process:** ~5 minutes per follow-up")
             
-            with col2:
-                st.info("**⚠️ Areas for Improvement:**")
-                st.text("• Survey completion rate needs attention (72%)")
-                st.text("• Session duration below target (12.5 vs 15 min)")
-                st.text("• Mobile app requests increasing (38%)")
-                st.text("• Integration requests from 45% of clients")
-                
-            # Time savings calculation (keeping existing)
-            st.markdown("---")
-            st.markdown("**⏰ Productivity Impact:**")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Manual Process Time", "45 min/task")
-            with col2:
-                st.metric("Automated Process Time", "5 min/task")
-            with col3:
-                st.metric("Monthly Time Saved", "18.5 hours", "+2.5 hours")
+            st.metric("Estimated Monthly Time Saved", "16 hours", "+4 hours")
 
     # --- MAIN APP ROUTING ---
     st.set_page_config(page_title="Affintel", layout="centered")
